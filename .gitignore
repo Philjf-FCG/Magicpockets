@@ -1,0 +1,7 @@
+# Local build output
+dist/
+
+# Common WinUAE binaries copied locally
+winuae/*.exe
+winuae/*.dll
+winuae/*.chm
