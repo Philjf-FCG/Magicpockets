@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [ValidateSet('CSL', 'CSLTrainer', 'SKR')]
-    [string]$Variant = 'CSL',
+    [string]$Variant = 'SKR',
     [switch]$Windowed
 )
 
@@ -10,7 +10,12 @@ $ErrorActionPreference = 'Stop'
 
 $projectRoot = $PSScriptRoot
 $configPath = Join-Path $projectRoot 'config\MagicPockets.uae'
-$romPath = Join-Path $projectRoot 'roms\kick13.rom'
+
+$romCandidates = @(
+    Join-Path $projectRoot 'roms\kickstart-1.3.rom'
+    Join-Path $projectRoot 'roms\kick13.rom'
+)
+$romPath = $romCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 
 $diskMap = @{
     CSL = 'game\disks\MagicPockets.adf'
@@ -22,6 +27,8 @@ $diskPath = Join-Path $projectRoot $diskMap[$Variant]
 $winuaePath = @(
     Join-Path $projectRoot 'winuae\winuae64.exe'
     Join-Path $projectRoot 'winuae\winuae.exe'
+    Join-Path $projectRoot 'winuae64.exe'
+    Join-Path $projectRoot 'winuae.exe'
 ) | Where-Object { Test-Path $_ } | Select-Object -First 1
 
 if (-not $winuaePath) {
@@ -32,8 +39,8 @@ if (-not (Test-Path $configPath)) {
     throw "Missing config file: $configPath"
 }
 
-if (-not (Test-Path $romPath)) {
-    throw "Missing Kickstart ROM. Place kick13.rom in the roms folder."
+if (-not $romPath) {
+    throw "Missing Kickstart ROM. Place kickstart-1.3.rom in the roms folder."
 }
 
 if (-not (Test-Path $diskPath)) {
@@ -43,8 +50,9 @@ if (-not (Test-Path $diskPath)) {
 $launchArgs = @(
     '-f', $configPath
     '-s', "kickstart_rom_file=$romPath"
-    '-0', $diskPath
 )
+
+$launchArgs += @('-s', "floppy0=$diskPath")
 
 if ($Windowed) {
     $launchArgs += @('-s', 'gfx_fullscreen_amiga=false')
@@ -52,5 +60,5 @@ if ($Windowed) {
     $launchArgs += @('-s', 'gfx_fullscreen_amiga=true')
 }
 
-$proc = Start-Process -FilePath $winuaePath -ArgumentList $launchArgs -WorkingDirectory (Split-Path $winuaePath -Parent) -PassThru -Wait
+$proc = Start-Process -FilePath $winuaePath -ArgumentList $launchArgs -WorkingDirectory $projectRoot -PassThru -Wait
 exit $proc.ExitCode

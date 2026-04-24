@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$OutputDir = 'dist\MagicPockets-Steam'
+    [string]$OutputDir = 'dist\Steam-WinUAE'
 )
 
 Set-StrictMode -Version Latest
@@ -10,11 +10,12 @@ $projectRoot = $PSScriptRoot
 $outputPath = Join-Path $projectRoot $OutputDir
 
 $requiredPaths = @(
-    'Launch-MagicPockets.cmd',
-    'Launch-MagicPockets.ps1',
     'config\MagicPockets.uae',
     'game\disks\MagicPockets.adf',
-    'roms\kick13.rom'
+    'roms\kickstart-1.3.rom',
+    'winuae\winuae64.exe',
+    'Launch-MagicPockets.bat',
+    'README-Steam.txt'
 )
 
 foreach ($required in $requiredPaths) {
@@ -24,21 +25,28 @@ foreach ($required in $requiredPaths) {
     }
 }
 
-$winuaeFolder = Join-Path $projectRoot 'winuae'
-$winuaeExeCount = (Get-ChildItem -Path $winuaeFolder -Filter 'winuae*.exe' -ErrorAction SilentlyContinue).Count
-if ($winuaeExeCount -eq 0) {
-    throw 'No WinUAE executable found in winuae folder.'
-}
-
 if (Test-Path $outputPath) {
     Remove-Item -Path $outputPath -Recurse -Force
 }
 
 New-Item -ItemType Directory -Path $outputPath | Out-Null
 
-$copyItems = @('Launch-MagicPockets.cmd', 'Launch-MagicPockets.ps1', 'config', 'game', 'roms', 'winuae')
-foreach ($item in $copyItems) {
-    Copy-Item -Path (Join-Path $projectRoot $item) -Destination $outputPath -Recurse -Force
+Copy-Item -Path (Join-Path $projectRoot 'winuae\winuae64.exe') -Destination (Join-Path $outputPath 'winuae64.exe') -Force
+Copy-Item -Path (Join-Path $projectRoot 'roms\kickstart-1.3.rom') -Destination (Join-Path $outputPath 'kickstart-1.3.rom') -Force
+Copy-Item -Path (Join-Path $projectRoot 'game\disks\MagicPockets.adf') -Destination (Join-Path $outputPath 'magicpockets.adf') -Force
+Copy-Item -Path (Join-Path $projectRoot 'game\disks\MagicPockets-Plus4.adf') -Destination (Join-Path $outputPath 'magicpockets-plus4.adf') -Force
+Copy-Item -Path (Join-Path $projectRoot 'game\disks\MagicPockets-SKR.adf') -Destination (Join-Path $outputPath 'magicpockets-skr.adf') -Force
+Copy-Item -Path (Join-Path $projectRoot 'Launch-MagicPockets.bat') -Destination (Join-Path $outputPath 'Launch-MagicPockets.bat') -Force
+Copy-Item -Path (Join-Path $projectRoot 'README-Steam.txt') -Destination (Join-Path $outputPath 'README-Steam.txt') -Force
+
+$configContent = Get-Content -Path (Join-Path $projectRoot 'config\MagicPockets.uae')
+$configContent = $configContent -replace '^kickstart_rom_file=.*$', 'kickstart_rom_file=kickstart-1.3.rom'
+$configContent = $configContent -replace '^floppy0=.*$', 'floppy0=magicpockets.adf'
+Set-Content -Path (Join-Path $outputPath 'magicpockets_steam.uae') -Value $configContent -Encoding ascii
+
+$sourceIni = Join-Path $projectRoot 'winuae\winuae.ini'
+if (Test-Path $sourceIni) {
+    Copy-Item -Path $sourceIni -Destination (Join-Path $outputPath 'winuae.ini') -Force
 }
 
 Write-Host "Steam package staged at: $outputPath"

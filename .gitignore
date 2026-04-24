@@ -5,3 +5,6 @@ dist/
 winuae/*.exe
 winuae/*.dll
 winuae/*.chm
+
+# Local ROM dependencies
+roms/*.rom
